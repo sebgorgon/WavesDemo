@@ -1,7 +1,3 @@
-import html
-from IPython.display import display, HTML
-
-html_content = """
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 800px; margin: auto; border: 1px solid #eaeaea; padding: 25px; border-radius: 12px; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); box-sizing: border-box;">
     <h3 style="text-align: center; margin-top: 0; color: #333; font-weight: 600;">Wave Reflection and Transmission</h3>
     
@@ -73,24 +69,20 @@ html_content = """
         
         tLabel.innerText = t.toFixed(2);
 
-        // Physics Constants
         let T_tension = 1.0;
         let v1 = Math.sqrt(T_tension / mu1);
         let v2 = Math.sqrt(T_tension / mu2);
         let R = (v2 - v1) / (v2 + v1);
         let T_coeff = (2 * v2) / (v2 + v1);
         
-        // Pulse Constants
         let w = 1.5;
         let A_pulse = 1.0;
 
-        // Sine Constants
         let omega = 3.0; 
         let k1 = omega / v1; 
         let k2 = omega / v2; 
         let A_sine = 1.0; 
 
-        // Boundary connection point
         let knotY = 0;
         if (isSine) {
             knotY = T_coeff * A_sine * Math.cos(-omega * t);
@@ -98,25 +90,20 @@ html_content = """
             knotY = T_coeff * A_pulse * Math.exp(-Math.pow(v1*t, 2) / Math.pow(w, 2));
         }
 
-        // Mapping functions: X axis now spans from -10 to +10 (width of 20)
         let mapX = (x) => ((x + 10) / 20) * canvas.width;
         let mapY = (y) => canvas.height - ((y + 2.2) / 4.4) * canvas.height;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // --- PERFECTLY ALIGNED GRID ---
         ctx.strokeStyle = "#eef0f2";
         ctx.lineWidth = 1;
         ctx.beginPath();
         
-        // Vertical grid lines (every 1 unit on X)
         for(let x_val = -10; x_val <= 10; x_val += 1) {
             let px = mapX(x_val);
             ctx.moveTo(px, 0);
             ctx.lineTo(px, canvas.height);
         }
-        
-        // Horizontal grid lines (every 0.5 units on Y)
         for(let y_val = -2.0; y_val <= 2.0; y_val += 0.5) {
             let py = mapY(y_val);
             ctx.moveTo(0, py);
@@ -124,7 +111,6 @@ html_content = """
         }
         ctx.stroke();
 
-        // X-axis (centered exactly at y=0)
         ctx.strokeStyle = "#999";
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -135,7 +121,6 @@ html_content = """
         ctx.fillStyle = "#666";
         ctx.font = "12px sans-serif";
         ctx.fillText("Position (x)", canvas.width - 75, mapY(0) - 15);
-        // X-axis ticks every 2 units
         for(let x_tick = -10; x_tick <= 10; x_tick += 2) {
             let px = mapX(x_tick);
             ctx.beginPath(); ctx.moveTo(px, mapY(0) - 4); ctx.lineTo(px, mapY(0) + 4); ctx.stroke();
@@ -145,7 +130,6 @@ html_content = """
             }
         }
 
-        // Y-axis (Boundary x = 0)
         ctx.strokeStyle = "#666";
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
@@ -155,7 +139,6 @@ html_content = """
         ctx.setLineDash([]); 
         
         ctx.fillText("Amplitude (y)", mapX(0) + 12, 22);
-        // Y-axis ticks from -2 to 2
         for(let y_tick = -2.0; y_tick <= 2.0; y_tick += 1.0) {
             let py = mapY(y_tick);
             ctx.beginPath(); ctx.moveTo(mapX(0) - 4, py); ctx.lineTo(mapX(0) + 4, py); ctx.stroke();
@@ -164,9 +147,7 @@ html_content = """
 
         let resolution = 1500; 
 
-        // --- DRAW COMPONENTS (If Checked) ---
         if (showComps) {
-            // Incident Wave (Green Dashed)
             ctx.strokeStyle = "rgba(44, 160, 44, 0.7)";
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
@@ -181,7 +162,6 @@ html_content = """
             }
             ctx.stroke();
 
-            // Reflected Wave (Red Dashed)
             ctx.strokeStyle = "rgba(214, 39, 40, 0.7)";
             ctx.beginPath();
             for(let i = 0; i <= resolution; i++) {
@@ -196,9 +176,6 @@ html_content = """
             ctx.setLineDash([]); 
         }
 
-        // --- DRAW MAIN STRINGS (Superposition & Transmitted) ---
-        
-        // Left String (Superposition)
         ctx.strokeStyle = "#1f77b4";
         ctx.lineWidth = Math.min(6, 1 + raw_mu1); 
         ctx.beginPath();
@@ -220,7 +197,6 @@ html_content = """
         }
         ctx.stroke();
 
-        // Right String (Transmitted)
         ctx.strokeStyle = "#ff7f0e";
         ctx.lineWidth = Math.min(6, 1 + raw_mu2);
         ctx.beginPath();
@@ -239,14 +215,11 @@ html_content = """
         }
         ctx.stroke();
 
-        // Draw Knot
         ctx.fillStyle = "#222";
         ctx.beginPath();
         ctx.arc(mapX(0), mapY(knotY), 5, 0, 2 * Math.PI);
         ctx.fill();
 
-        // --- DATA & LEGEND OVERLAYS ---
-        
         ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
         ctx.strokeStyle = "#ccc";
         ctx.lineWidth = 1;
@@ -323,7 +296,3 @@ html_content = """
 
     draw();
 </script>
-"""
-
-safe_html = html.escape(html_content)
-display(HTML(f'<iframe srcdoc="{safe_html}" width="100%" height="620px" style="border:none;"></iframe>'))
