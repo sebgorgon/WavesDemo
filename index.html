@@ -1,0 +1,329 @@
+import html
+from IPython.display import display, HTML
+
+html_content = """
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 800px; margin: auto; border: 1px solid #eaeaea; padding: 25px; border-radius: 12px; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); box-sizing: border-box;">
+    <h3 style="text-align: center; margin-top: 0; color: #333; font-weight: 600;">Wave Reflection and Transmission</h3>
+    
+    <canvas id="waveCanvas" width="750" height="350" style="border: 1px solid #e0e0e0; border-radius: 6px; background: #fafbfc; display: block; margin: 0 auto;"></canvas>
+    
+    <div style="margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px;">
+        <button id="playBtn" style="padding: 10px 24px; font-size: 15px; font-weight: bold; cursor: pointer; background: #007aff; color: white; border: none; border-radius: 6px; transition: background 0.2s;">Play</button>
+        
+        <div>
+            <label style="font-weight: 600; color: #444; font-size: 14px;">Shape:</label><br>
+            <select id="waveType" style="padding: 8px 12px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; cursor: pointer; background: white;">
+                <option value="pulse">Gaussian Pulse</option>
+                <option value="sine">Continuous Sine</option>
+            </select>
+        </div>
+
+        <div>
+            <label style="font-weight: 600; color: #444; font-size: 14px;">Components:</label><br>
+            <div style="margin-top: 8px; display: flex; align-items: center;">
+                <input type="checkbox" id="showComponents" checked style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="showComponents" style="margin-left: 6px; font-size: 13px; cursor: pointer; color: #444;">Show Incident/Reflected</label>
+            </div>
+        </div>
+
+        <div style="flex-grow: 1; min-width: 200px;">
+            <label style="font-weight: 500; color: #444;">Time (t): <span id="tLabel" style="font-family: monospace; font-size: 14px; background: #eee; padding: 2px 6px; border-radius: 4px;">-8.00</span></label><br>
+            <input type="range" id="tSlider" min="-10" max="10" step="0.02" value="-8" style="width: 100%; margin-top: 8px; cursor: pointer;">
+        </div>
+    </div>
+    
+    <div style="margin-top: 20px; display: flex; gap: 30px; padding: 15px 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #edf2f7;">
+        <div style="flex: 1;">
+            <label style="font-weight: 600; color: #444;">&mu;<sub>1</sub> (Left String Density):</label><br>
+            <input type="number" id="mu1Input" step="0.5" value="1.0" style="width: 120px; padding: 8px 12px; margin-top: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+        </div>
+        <div style="flex: 1;">
+            <label style="font-weight: 600; color: #444;">&mu;<sub>2</sub> (Right String Density):</label><br>
+            <input type="number" id="mu2Input" step="0.5" value="4.0" style="width: 120px; padding: 8px 12px; margin-top: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById("waveCanvas");
+    const ctx = canvas.getContext("2d");
+    const playBtn = document.getElementById("playBtn");
+    const tSlider = document.getElementById("tSlider");
+    const waveType = document.getElementById("waveType");
+    const showComponents = document.getElementById("showComponents");
+    const mu1Input = document.getElementById("mu1Input");
+    const mu2Input = document.getElementById("mu2Input");
+    const tLabel = document.getElementById("tLabel");
+
+    let isPlaying = false;
+    let animationId;
+
+    function draw() {
+        let t = parseFloat(tSlider.value);
+        let raw_mu1 = parseFloat(mu1Input.value);
+        let raw_mu2 = parseFloat(mu2Input.value);
+        let isSine = waveType.value === "sine";
+        let showComps = showComponents.checked;
+        
+        if (isNaN(raw_mu1)) raw_mu1 = 1.0;
+        if (isNaN(raw_mu2)) raw_mu2 = 4.0;
+        
+        let mu1 = Math.max(1e-5, Math.min(raw_mu1, 1e7));
+        let mu2 = Math.max(1e-5, Math.min(raw_mu2, 1e7));
+        
+        tLabel.innerText = t.toFixed(2);
+
+        // Physics Constants
+        let T_tension = 1.0;
+        let v1 = Math.sqrt(T_tension / mu1);
+        let v2 = Math.sqrt(T_tension / mu2);
+        let R = (v2 - v1) / (v2 + v1);
+        let T_coeff = (2 * v2) / (v2 + v1);
+        
+        // Pulse Constants
+        let w = 1.5;
+        let A_pulse = 1.0;
+
+        // Sine Constants
+        let omega = 3.0; 
+        let k1 = omega / v1; 
+        let k2 = omega / v2; 
+        let A_sine = 1.0; 
+
+        // Boundary connection point
+        let knotY = 0;
+        if (isSine) {
+            knotY = T_coeff * A_sine * Math.cos(-omega * t);
+        } else {
+            knotY = T_coeff * A_pulse * Math.exp(-Math.pow(v1*t, 2) / Math.pow(w, 2));
+        }
+
+        // Mapping functions: X axis now spans from -10 to +10 (width of 20)
+        let mapX = (x) => ((x + 10) / 20) * canvas.width;
+        let mapY = (y) => canvas.height - ((y + 2.2) / 4.4) * canvas.height;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // --- PERFECTLY ALIGNED GRID ---
+        ctx.strokeStyle = "#eef0f2";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        
+        // Vertical grid lines (every 1 unit on X)
+        for(let x_val = -10; x_val <= 10; x_val += 1) {
+            let px = mapX(x_val);
+            ctx.moveTo(px, 0);
+            ctx.lineTo(px, canvas.height);
+        }
+        
+        // Horizontal grid lines (every 0.5 units on Y)
+        for(let y_val = -2.0; y_val <= 2.0; y_val += 0.5) {
+            let py = mapY(y_val);
+            ctx.moveTo(0, py);
+            ctx.lineTo(canvas.width, py);
+        }
+        ctx.stroke();
+
+        // X-axis (centered exactly at y=0)
+        ctx.strokeStyle = "#999";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, mapY(0));
+        ctx.lineTo(canvas.width, mapY(0));
+        ctx.stroke();
+
+        ctx.fillStyle = "#666";
+        ctx.font = "12px sans-serif";
+        ctx.fillText("Position (x)", canvas.width - 75, mapY(0) - 15);
+        // X-axis ticks every 2 units
+        for(let x_tick = -10; x_tick <= 10; x_tick += 2) {
+            let px = mapX(x_tick);
+            ctx.beginPath(); ctx.moveTo(px, mapY(0) - 4); ctx.lineTo(px, mapY(0) + 4); ctx.stroke();
+            if (x_tick !== 0) {
+                let textWidth = ctx.measureText(x_tick).width;
+                ctx.fillText(x_tick, px - (textWidth/2), mapY(0) + 18);
+            }
+        }
+
+        // Y-axis (Boundary x = 0)
+        ctx.strokeStyle = "#666";
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(mapX(0), 0);
+        ctx.lineTo(mapX(0), canvas.height);
+        ctx.stroke();
+        ctx.setLineDash([]); 
+        
+        ctx.fillText("Amplitude (y)", mapX(0) + 12, 22);
+        // Y-axis ticks from -2 to 2
+        for(let y_tick = -2.0; y_tick <= 2.0; y_tick += 1.0) {
+            let py = mapY(y_tick);
+            ctx.beginPath(); ctx.moveTo(mapX(0) - 4, py); ctx.lineTo(mapX(0) + 4, py); ctx.stroke();
+            if (y_tick !== 0) ctx.fillText(y_tick.toFixed(1), mapX(0) - 30, py + 4);
+        }
+
+        let resolution = 1500; 
+
+        // --- DRAW COMPONENTS (If Checked) ---
+        if (showComps) {
+            // Incident Wave (Green Dashed)
+            ctx.strokeStyle = "rgba(44, 160, 44, 0.7)";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            for(let i = 0; i <= resolution; i++) {
+                let x = -10 + (10 * i / resolution);
+                let y = isSine ? A_sine * Math.cos(k1*x - omega*t) 
+                               : A_pulse * Math.exp(-Math.pow(x - v1*t, 2) / Math.pow(w, 2));
+                let px = mapX(x);
+                let py = mapY(y);
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            // Reflected Wave (Red Dashed)
+            ctx.strokeStyle = "rgba(214, 39, 40, 0.7)";
+            ctx.beginPath();
+            for(let i = 0; i <= resolution; i++) {
+                let x = -10 + (10 * i / resolution);
+                let y = isSine ? R * A_sine * Math.cos(-k1*x - omega*t) 
+                               : R * A_pulse * Math.exp(-Math.pow(x + v1*t, 2) / Math.pow(w, 2));
+                let px = mapX(x);
+                let py = mapY(y);
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]); 
+        }
+
+        // --- DRAW MAIN STRINGS (Superposition & Transmitted) ---
+        
+        // Left String (Superposition)
+        ctx.strokeStyle = "#1f77b4";
+        ctx.lineWidth = Math.min(6, 1 + raw_mu1); 
+        ctx.beginPath();
+        for(let i = 0; i <= resolution; i++) {
+            let x = -10 + (10 * i / resolution);
+            let y = 0;
+            if (isSine) {
+                let incident = A_sine * Math.cos(k1*x - omega*t);
+                let reflected = R * A_sine * Math.cos(-k1*x - omega*t);
+                y = incident + reflected;
+            } else {
+                let incident = A_pulse * Math.exp(-Math.pow(x - v1*t, 2) / Math.pow(w, 2));
+                let reflected = R * A_pulse * Math.exp(-Math.pow(x + v1*t, 2) / Math.pow(w, 2));
+                y = incident + reflected;
+            }
+            let px = mapX(x);
+            let py = mapY(y);
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        // Right String (Transmitted)
+        ctx.strokeStyle = "#ff7f0e";
+        ctx.lineWidth = Math.min(6, 1 + raw_mu2);
+        ctx.beginPath();
+        for(let i = 0; i <= resolution; i++) {
+            let x = 10 * i / resolution;
+            let y = 0;
+            if (isSine) {
+                y = T_coeff * A_sine * Math.cos(k2*x - omega*t);
+            } else {
+                let exponent = -Math.pow((v1/v2)*x - v1*t, 2) / Math.pow(w, 2);
+                y = (exponent < -100) ? 0 : T_coeff * A_pulse * Math.exp(exponent);
+            }
+            let px = mapX(x);
+            let py = mapY(y);
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+
+        // Draw Knot
+        ctx.fillStyle = "#222";
+        ctx.beginPath();
+        ctx.arc(mapX(0), mapY(knotY), 5, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // --- DATA & LEGEND OVERLAYS ---
+        
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.strokeStyle = "#ccc";
+        ctx.lineWidth = 1;
+        ctx.shadowColor = "rgba(0,0,0,0.1)";
+        ctx.shadowBlur = 4;
+        ctx.fillRect(15, 15, 125, 105);
+        ctx.strokeRect(15, 15, 125, 105);
+        ctx.shadowBlur = 0; 
+        
+        ctx.fillStyle = "#222";
+        ctx.font = "14px monospace";
+        ctx.fillText("v1 = " + (v1 > 1000 ? "∞" : v1.toFixed(2)), 25, 40);
+        ctx.fillText("v2 = " + (v2 > 1000 ? "∞" : v2.toFixed(2)), 25, 60);
+        ctx.fillText("R  = " + R.toFixed(2), 25, 90);
+        ctx.fillText("T  = " + T_coeff.toFixed(2), 25, 108);
+
+        if (showComps) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+            ctx.strokeStyle = "#ccc";
+            ctx.lineWidth = 1;
+            ctx.shadowColor = "rgba(0,0,0,0.1)";
+            ctx.shadowBlur = 4;
+            ctx.fillRect(canvas.width - 170, 15, 155, 105);
+            ctx.strokeRect(canvas.width - 170, 15, 155, 105);
+            ctx.shadowBlur = 0; 
+            
+            ctx.font = "12px sans-serif";
+            
+            ctx.strokeStyle = "#1f77b4"; ctx.lineWidth = 3; ctx.setLineDash([]);
+            ctx.beginPath(); ctx.moveTo(canvas.width - 160, 32); ctx.lineTo(canvas.width - 140, 32); ctx.stroke();
+            ctx.fillStyle = "#222"; ctx.fillText("Superposition", canvas.width - 130, 36);
+
+            ctx.strokeStyle = "#ff7f0e"; 
+            ctx.beginPath(); ctx.moveTo(canvas.width - 160, 54); ctx.lineTo(canvas.width - 140, 54); ctx.stroke();
+            ctx.fillText("Transmitted", canvas.width - 130, 58);
+
+            ctx.strokeStyle = "rgba(44, 160, 44, 0.9)"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.moveTo(canvas.width - 160, 76); ctx.lineTo(canvas.width - 140, 76); ctx.stroke();
+            ctx.fillText("Incident", canvas.width - 130, 80);
+
+            ctx.strokeStyle = "rgba(214, 39, 40, 0.9)";
+            ctx.beginPath(); ctx.moveTo(canvas.width - 160, 98); ctx.lineTo(canvas.width - 140, 98); ctx.stroke();
+            ctx.fillText("Reflected", canvas.width - 130, 102);
+            
+            ctx.setLineDash([]);
+        }
+    }
+
+    function playLoop() {
+        if (!isPlaying) return;
+        let t = parseFloat(tSlider.value);
+        if (t >= 10) {
+            tSlider.value = -10; 
+        } else {
+            tSlider.value = (t + 0.02).toFixed(2);
+        }
+        draw();
+        animationId = requestAnimationFrame(playLoop);
+    }
+
+    playBtn.addEventListener("click", () => {
+        isPlaying = !isPlaying;
+        playBtn.innerText = isPlaying ? "Pause" : "Play";
+        playBtn.style.background = isPlaying ? "#e53e3e" : "#007aff";
+        if (isPlaying) playLoop();
+        else cancelAnimationFrame(animationId);
+    });
+
+    tSlider.addEventListener("input", draw);
+    waveType.addEventListener("change", draw);
+    showComponents.addEventListener("change", draw);
+    mu1Input.addEventListener("input", draw);
+    mu2Input.addEventListener("input", draw);
+
+    draw();
+</script>
+"""
+
+safe_html = html.escape(html_content)
+display(HTML(f'<iframe srcdoc="{safe_html}" width="100%" height="620px" style="border:none;"></iframe>'))
