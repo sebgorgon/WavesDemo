@@ -27,8 +27,8 @@
         <div>
             <label style="font-weight: 600; color: #444; font-size: 14px;">Shape:</label><br>
             <select id="waveType" style="padding: 8px 12px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; cursor: pointer; background: white;">
-                <option value="pulse">Gaussian Pulse</option>
-                <option value="sine">Continuous Sine</option>
+                <option value="pulse">Pulse</option>
+                <option value="sine">Sine</option>
             </select>
         </div>
 
@@ -292,7 +292,7 @@
         if (t >= 10) {
             tSlider.value = -10; 
         } else {
-            tSlider.value = (t + 0.02).toFixed(2);
+            tSlider.value = (t + 0.04).toFixed(2);
         }
         draw();
         animationId = requestAnimationFrame(playLoop);
