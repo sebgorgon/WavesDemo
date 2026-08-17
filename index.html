@@ -1,7 +1,25 @@
-<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 800px; margin: auto; border: 1px solid #eaeaea; padding: 25px; border-radius: 12px; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); box-sizing: border-box;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Reflection and Transmission</title>
+    <style>
+        body {
+            background-color: #f4f6f8; /* Soft background for the whole webpage */
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; width: 100%; max-width: 800px; border: 1px solid #eaeaea; padding: 25px; border-radius: 12px; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); box-sizing: border-box;">
     <h3 style="text-align: center; margin-top: 0; color: #333; font-weight: 600;">Wave Reflection and Transmission</h3>
     
-    <canvas id="waveCanvas" width="750" height="350" style="border: 1px solid #e0e0e0; border-radius: 6px; background: #fafbfc; display: block; margin: 0 auto;"></canvas>
+    <canvas id="waveCanvas" width="750" height="350" style="border: 1px solid #e0e0e0; border-radius: 6px; background: #fafbfc; display: block; margin: 0 auto; max-width: 100%;"></canvas>
     
     <div style="margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px;">
         <button id="playBtn" style="padding: 10px 24px; font-size: 15px; font-weight: bold; cursor: pointer; background: #007aff; color: white; border: none; border-radius: 6px; transition: background 0.2s;">Play</button>
@@ -28,12 +46,12 @@
         </div>
     </div>
     
-    <div style="margin-top: 20px; display: flex; gap: 30px; padding: 15px 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #edf2f7;">
-        <div style="flex: 1;">
+    <div style="margin-top: 20px; display: flex; gap: 30px; padding: 15px 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #edf2f7; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 150px;">
             <label style="font-weight: 600; color: #444;">&mu;<sub>1</sub> (Left String Density):</label><br>
             <input type="number" id="mu1Input" step="0.5" value="1.0" style="width: 120px; padding: 8px 12px; margin-top: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
         </div>
-        <div style="flex: 1;">
+        <div style="flex: 1; min-width: 150px;">
             <label style="font-weight: 600; color: #444;">&mu;<sub>2</sub> (Right String Density):</label><br>
             <input type="number" id="mu2Input" step="0.5" value="4.0" style="width: 120px; padding: 8px 12px; margin-top: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
         </div>
@@ -296,3 +314,5 @@
 
     draw();
 </script>
+</body>
+</html>
